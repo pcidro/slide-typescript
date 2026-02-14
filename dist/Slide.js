@@ -7,6 +7,8 @@ export default class Slide {
     index;
     slide;
     paused;
+    thumbItems;
+    thumb;
     timeout;
     pausedTimeout;
     constructor(container, slides, controls, time = 5000) {
@@ -15,7 +17,9 @@ export default class Slide {
         this.paused = false;
         this.controls = controls;
         this.time = time;
+        this.thumb = null;
         this.pausedTimeout = null;
+        this.thumbItems = null;
         this.index = localStorage.getItem("activeSlide")
             ? Number(localStorage.getItem("activeSlide"))
             : 0;
@@ -45,6 +49,11 @@ export default class Slide {
         this.index = index;
         this.slide = this.slides[this.index];
         localStorage.setItem("activeSlide", String(this.index));
+        if (this.thumbItems) {
+            this.thumb = this.thumbItems[this.index];
+            this.thumbItems.forEach((el) => el.classList.remove("active"));
+            this.thumb.classList.add("active");
+        }
         this.slides.forEach((el) => this.hide(el));
         this.slide.classList.add("active");
         if (this.slide instanceof HTMLVideoElement) {
@@ -57,6 +66,9 @@ export default class Slide {
     auto(time) {
         this.timeout?.clear();
         this.timeout = new Timeout(() => this.next(), time);
+        if (this.thumb) {
+            this.thumb.style.animationDuration = `${time}ms`;
+        }
     }
     next() {
         if (this.paused)
@@ -74,6 +86,7 @@ export default class Slide {
         this.pausedTimeout = new Timeout(() => {
             this.timeout?.pause();
             this.paused = true;
+            this.thumb?.classList.add("paused");
             if (this.slide instanceof HTMLVideoElement) {
                 this.slide.pause();
             }
@@ -84,6 +97,7 @@ export default class Slide {
         if (this.paused) {
             this.paused = false;
             this.timeout?.continue();
+            this.thumb?.classList.remove("paused");
             if (this.slide instanceof HTMLVideoElement) {
                 this.slide.play();
             }
@@ -101,8 +115,18 @@ export default class Slide {
         nextButton.addEventListener("pointerup", () => this.next());
         prevButton.addEventListener("pointerup", () => this.prev());
     }
+    addThumbItems() {
+        const thumbContainer = document.createElement("div");
+        thumbContainer.id = "slide-thumb";
+        for (let index = 0; index < this.slides.length; index++) {
+            thumbContainer.innerHTML += `<span><span class="thumb-item"></span></span>`;
+        }
+        this.controls.appendChild(thumbContainer);
+        this.thumbItems = Array.from(document.querySelectorAll(".thumb-item"));
+    }
     init() {
         this.addControls();
+        this.addThumbItems();
         this.show(this.index);
     }
 }
